@@ -47,10 +47,6 @@ def user_validator(phone_numbers: list):
     reset_count = 0
     for phone in phones:
         time.sleep(1)
-        if reset_count > 29:
-            print(f"Flood limit reached. Waiting for 210 seconds.")
-            reset_count = 0
-            time.sleep(210)
         api_res = get_names(phone)
         result[phone] = api_res
         count += 1
