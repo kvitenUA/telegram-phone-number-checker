@@ -20,16 +20,17 @@ def get_names(phone_number):
         contacts = client(functions.contacts.ImportContactsRequest([contact]))
         username = contacts.to_dict()['users'][0]['username']
         if not username:
-            print("*"*5 + f' Response detected, but no user name returned by the API for the number: {phone_number} ' + "*"*5)
-            client(functions.contacts.DeleteContactsRequest(id=[username]))
-            return
+            print(f"https://t.me/+{phone_number}") # return telegram link to user based on phone number
+            client(functions.contacts.DeleteContactsRequest(id=[contacts.users[0]]))
+            return (f"https://t.me/+{phone_number}")
         else:
-            client(functions.contacts.DeleteContactsRequest(id=[username]))
-            return username
+            print(f"https://t.me/+{phone_number}")
+            client(functions.contacts.DeleteContactsRequest(id=[contacts.users[0]]))
+            return
     except IndexError as e:
-        return f'ERROR: there was no response for the phone number: {phone_number}'
+        return f'NO ACCOUNT'
     except TypeError as e:
-        return f"TypeError: {e}. --> The error might have occured due to the inability to delete the {phone_number} from the contact list."
+        return f"https://t.me/+{phone_number}"
     except:
         raise
 
@@ -71,7 +72,7 @@ if __name__ == '__main__':
 
     else:
         with open(args.input_file_path, 'r') as input_file:
-            input_phones = input_file.readlines()
+            input_phones = input_file.readlines(99) # limiting request with first 99 lines in text-file to avoid flood wait error
         
         # remove spaces and newlines in the phones
         phones = [tlf.strip('\n').replace(' ','') for tlf in input_phones]
