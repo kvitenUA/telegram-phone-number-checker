@@ -5,6 +5,7 @@ from telethon import functions, types
 from dotenv import load_dotenv
 import argparse
 import os
+import time
 from getpass import getpass
 
 
@@ -13,6 +14,7 @@ load_dotenv()
 API_ID = os.getenv('API_ID')
 API_HASH = os.getenv('API_HASH')
 PHONE_NUMBER = os.getenv('PHONE_NUMBER')
+PHONE_LINES_LIMIT = 500
 
 def get_names(phone_number):    
     try:
@@ -20,15 +22,15 @@ def get_names(phone_number):
         contacts = client(functions.contacts.ImportContactsRequest([contact]))
         username = contacts.to_dict()['users'][0]['username']
         if not username:
-            print(f"https://t.me/+{phone_number}") # return telegram link to user based on phone number
+            # print(f"https://t.me/+{phone_number}")
             client(functions.contacts.DeleteContactsRequest(id=[contacts.users[0]]))
             return (f"https://t.me/+{phone_number}")
         else:
-            print(f"https://t.me/+{phone_number}")
+            # print(f"https://t.me/+{phone_number}")
             client(functions.contacts.DeleteContactsRequest(id=[contacts.users[0]]))
-            return
+            return (f"https://t.me/+{phone_number}")
     except IndexError as e:
-        return f'NO ACCOUNT'
+        return f'NO DATA'
     except TypeError as e:
         return f"https://t.me/+{phone_number}"
     except:
@@ -39,10 +41,28 @@ def user_validator(phone_numbers: list):
     The function uses the get_api_response function to first check if the user exists and if it does, then it returns the first user name and the last user name.
     '''
     result = {}
+    count = 0
+    reset_count = 0
     for phone in phones:
-        api_res = get_names(phone)
-        result[phone] = api_res
-
+        time.sleep(1)
+        if reset_count > 29:
+            print(f"Flood limit reached. Waiting for 210 seconds.") # pause every 29 requests to avoid flood wait error
+            reset_count = 0
+            time.sleep(210)
+        try:
+            api_res = get_names(phone)
+            result[phone] = api_res
+            count += 1
+            reset_count += 1
+            print(f"Current number in order: {count}. Number: {phone}")
+            if args.output_filename: # append new result immediately into the csv file
+                csv = ""
+                csv += f"{list(result.items())[-1][0]},{list(result.items())[-1][1]}\n"
+                with open(args.output_filename, 'a') as output_file: 
+                    output_file.write(csv)
+        except errors.FloodWaitError as e: # didn't check it however should work in case Telegram API will change request limits
+            print('Have to sleep', e.seconds, 'seconds')
+            time.sleep(e.seconds)
     return result
 
 if __name__ == '__main__':
@@ -72,19 +92,10 @@ if __name__ == '__main__':
 
     else:
         with open(args.input_file_path, 'r') as input_file:
-            input_phones = input_file.readlines(99) # limiting request with first 99 lines in text-file to avoid flood wait error
+            input_phones = [next(input_file) for x in range(PHONE_LINES_LIMIT)] # read only first N lines from input file
         
         # remove spaces and newlines in the phones
         phones = [tlf.strip('\n').replace(' ','') for tlf in input_phones]
 
     result = user_validator(phones)
     print(result)
-
-    # If we have an output filename, save the csv
-    if args.output_filename:
-        csv = "telephone,username\n"
-        for phone, username in result.items():
-            csv += f"{phone},{username}\n"
-
-        with open(args.output_filename, 'w') as output_file:
-            output_file.write(csv)
