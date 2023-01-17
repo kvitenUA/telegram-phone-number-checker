@@ -9,25 +9,23 @@ import os
 import time
 from getpass import getpass
 
-
 load_dotenv()
 
 API_ID = os.getenv('API_ID')
 API_HASH = os.getenv('API_HASH')
 PHONE_NUMBER = os.getenv('PHONE_NUMBER')
-PHONE_LINES_LIMIT = 500
+PHONE_LINES_LIMIT = 50 # How much lines with phones import from txt file? 
+                        #MUST BE LESS OR EQUAL THAN AMOUNT OF LINES IN INPUT FILE
 
 def get_names(phone_number):    
     try:
         contact = InputPhoneContact(client_id = 0, phone = phone_number, first_name="", last_name="")
         contacts = client(functions.contacts.ImportContactsRequest([contact]))
-        username = contacts.to_dict()['users'][0]['username']
-        if not username:
-            # print(f"https://t.me/+{phone_number}")
+        registered = contacts.to_dict()['users'][0]['username']
+        if registered:
             client(functions.contacts.DeleteContactsRequest(id=[contacts.users[0]]))
             return (f"https://t.me/+{phone_number}")
         else:
-            # print(f"https://t.me/+{phone_number}")
             client(functions.contacts.DeleteContactsRequest(id=[contacts.users[0]]))
             return (f"https://t.me/+{phone_number}")
     except IndexError as e:
