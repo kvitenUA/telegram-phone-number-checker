@@ -2,6 +2,7 @@
 from telethon import TelegramClient, errors, events, sync
 from telethon.tl.types import InputPhoneContact
 from telethon import functions, types
+from telethon import errors
 from dotenv import load_dotenv
 import argparse
 import os
@@ -33,6 +34,9 @@ def get_names(phone_number):
         return f'NO DATA'
     except TypeError as e:
         return f"https://t.me/+{phone_number}"
+    except errors.FloodWaitError as e:
+            print('Have to sleep', e.seconds, 'seconds')
+            time.sleep(e.seconds)
     except:
         raise
 
@@ -46,23 +50,19 @@ def user_validator(phone_numbers: list):
     for phone in phones:
         time.sleep(1)
         if reset_count > 29:
-            print(f"Flood limit reached. Waiting for 210 seconds.") # pause every 29 requests to avoid flood wait error
+            print(f"Flood limit reached. Waiting for 210 seconds.")
             reset_count = 0
             time.sleep(210)
-        try:
-            api_res = get_names(phone)
-            result[phone] = api_res
-            count += 1
-            reset_count += 1
-            print(f"Current number in order: {count}. Number: {phone}")
-            if args.output_filename: # append new result immediately into the csv file
-                csv = ""
-                csv += f"{list(result.items())[-1][0]},{list(result.items())[-1][1]}\n"
-                with open(args.output_filename, 'a') as output_file: 
-                    output_file.write(csv)
-        except errors.FloodWaitError as e: # didn't check it however should work in case Telegram API will change request limits
-            print('Have to sleep', e.seconds, 'seconds')
-            time.sleep(e.seconds)
+        api_res = get_names(phone)
+        result[phone] = api_res
+        count += 1
+        reset_count += 1
+        print(f"Current number in order: {count}. Number: {phone}")
+        if args.output_filename:
+            csv = ""
+            csv += f"{list(result.items())[-1][0]},{list(result.items())[-1][1]}\n"
+            with open(args.output_filename, 'a') as output_file:
+                output_file.write(csv)
     return result
 
 if __name__ == '__main__':
